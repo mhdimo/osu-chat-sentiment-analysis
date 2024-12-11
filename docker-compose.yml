@@ -1,0 +1,102 @@
+services:
+  zookeeper:
+    image: bitnami/zookeeper:3.8
+    environment:
+      - ALLOW_ANONYMOUS_LOGIN=yes
+      - ZOO_DATA_DIR=/bitnami/zookeeper
+      - ZOO_LOG_DIR=/bitnami/zookeeper/logs
+      - ZOO_TICK_TIME=2000
+      - ZOO_INIT_LIMIT=10
+      - ZOO_SYNC_LIMIT=5
+    ports:
+      - "2181:2181"
+    volumes:
+      - zookeeper_data:/bitnami/zookeeper
+    networks:
+      - app-network
+
+  kafka:
+    image: bitnami/kafka:3.5
+    environment:
+      - KAFKA_BROKER_ID=1
+      - KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181
+      - KAFKA_LISTENERS=PLAINTEXT://:9092
+      - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092
+      - KAFKA_CREATE_TOPICS=irc-messages:1:1,irc-messages-sentiment:1:1
+      - ALLOW_PLAINTEXT_LISTENER=yes
+    ports:
+      - "9092:9092"
+    depends_on:
+      - zookeeper
+    volumes:
+      - kafka_data:/bitnami/kafka
+    networks:
+      - app-network
+
+  logstash:
+    image: docker.elastic.co/logstash/logstash:7.17.5
+    volumes:
+      - ./logstash/config/logstash.conf:/usr/share/logstash/pipeline/logstash.conf
+    ports:
+      - "5044:5044"
+    depends_on:
+      - kafka
+    networks:
+      - app-network
+
+  ingestion:
+    build:
+      context: ./ingestion
+      dockerfile: Dockerfile
+    env_file:
+      - ingestion/.env
+    depends_on:
+      - logstash
+    networks:
+      - app-network
+
+  spark-master:
+    image: bitnami/spark:3.4.1
+    environment:
+      - SPARK_MODE=master
+      - SPARK_RPC_AUTHENTICATION_ENABLED=no
+      - SPARK_RPC_ENCRYPTION_ENABLED=no
+      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
+      - SPARK_SSL_ENABLED=no
+    ports:
+      - "7077:7077"
+      - "8080:8080"
+    networks:
+      - app-network
+
+  spark-worker:
+    image: bitnami/spark:3.4.1
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=spark://spark-master:7077
+      - SPARK_WORKER_MEMORY=1G
+      - SPARK_WORKER_CORES=1
+    depends_on:
+      - spark-master
+    networks:
+      - app-network
+
+  spark-submit:
+    build:
+      context: ./spark
+      dockerfile: Dockerfile
+    depends_on:
+      - spark-worker
+      - kafka
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  zookeeper_data:
+    driver: local
+  kafka_data:
+    driver: local

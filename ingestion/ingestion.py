@@ -29,7 +29,7 @@ class IRCClient:
             'channel': "#osu"
         }
 
-        self.logstash_url = os.getenv("LOGSTASH_URL", "http://localhost:5044")
+        self.logstash_url = "http://logstash:5044"
 
         self.client = irc.client.Reactor()
         self.connection: Optional[irc.client.ServerConnection] = None
