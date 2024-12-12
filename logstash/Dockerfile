@@ -1,8 +1,5 @@
-FROM docker.elastic.co/logstash/logstash:8.16.1
+FROM docker.elastic.co/logstash/logstash:7.17.5
 
-# Copy custom configurations
-COPY logstash.conf /usr/share/logstash/config/
+COPY config/logstash.conf /usr/share/logstash/pipeline/logstash.conf
 
-USER root
-RUN chown logstash:logstash /usr/share/logstash/config/logstash.conf
-USER logstash
+EXPOSE 5044

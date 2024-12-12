@@ -1,8 +1,0 @@
-C:\logstash-8.16.1> bin\logstash -f config\logstash.conf
-C:\osu-chat-sentiment-analysis> python irc_client/ingestion.py
-bin/zookeeper-server-start.sh config/zookeeper.properties
-bin/kafka-server-start.sh config/server.properties
-bin/kafka-topics.sh --create --topic osu-chat-topic --bootstrap-server localhost:9092 --partitions 1 --replication-factor 1
-bin/kafka-topics.sh --create --topic osu-chat-sentiment --bootstrap-server localhost:9092 --partitions 1 --replication-factor 1
-bin/elasticsearch.bat
-bin/kibana.bat
