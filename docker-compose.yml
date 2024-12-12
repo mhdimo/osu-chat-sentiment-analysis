@@ -33,6 +33,17 @@ services:
     networks:
       - app-network
 
+  kafka-init:
+    image: bitnami/kafka:3.5
+    depends_on:
+      - kafka
+    entrypoint: /bin/bash
+    command: -c "sleep 10 && \
+      kafka-topics.sh --create --topic irc-messages --partitions 1 --replication-factor 1 --bootstrap-server kafka:9092 && \
+      kafka-topics.sh --create --topic irc-messages-sentiment --partitions 1 --replication-factor 1 --bootstrap-server kafka:9092"
+    networks:
+      - app-network
+
   logstash:
     image: docker.elastic.co/logstash/logstash:7.17.5
     volumes:
@@ -70,7 +81,9 @@ services:
       - app-network
 
   spark-worker:
-    image: bitnami/spark:3.4.1
+    build:
+      context: ./spark
+      dockerfile: worker.Dockerfile
     environment:
       - SPARK_MODE=worker
       - SPARK_MASTER_URL=spark://spark-master:7077
@@ -80,11 +93,13 @@ services:
       - spark-master
     networks:
       - app-network
-
+      
   spark-submit:
     build:
       context: ./spark
       dockerfile: Dockerfile
+    environment:
+      - SPARK_MASTER_URL=spark://spark-master:7077
     depends_on:
       - spark-worker
       - kafka
